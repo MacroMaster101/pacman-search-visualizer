@@ -1,4 +1,4 @@
-import { BoardRenderer } from './render.js';
+import { BoardRenderer } from './render.js?v=2';
 
 // ------------------------------------------------------------------ catalog
 
@@ -93,7 +93,7 @@ class PyWorker {
 
   start() {
     this.pending = new Map();
-    this.worker = new Worker('web/worker.js');
+    this.worker = new Worker('web/worker.js?v=2');
     this.ready = new Promise((resolve, reject) => {
       this.worker.onmessage = ({ data }) => {
         if (data.id === 'ready') {
