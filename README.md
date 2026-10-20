@@ -2,7 +2,7 @@
 
 # 🟡 Pac-Man Search Visualizer
 
-**Watch DFS, BFS, UCS and A\* think, one node at a time.**
+**Watch DFS, BFS, UCS, A\* and greedy search think, one node at a time.**
 
 Our SE3062 Intelligent Systems search code, running live in your browser 🧠✨
 
@@ -10,7 +10,8 @@ Our SE3062 Intelligent Systems search code, running live in your browser 🧠✨
 
 ![Python](https://img.shields.io/badge/Python-3.11-3b4bff?style=flat-square&logo=python&logoColor=white)
 ![Pyodide](https://img.shields.io/badge/Pyodide-WebAssembly-654ff0?style=flat-square&logo=webassembly&logoColor=white)
-![Autograder](https://img.shields.io/badge/Autograder_Q1–Q7-40%2F40-2ea043?style=flat-square)
+![Assignment](https://img.shields.io/badge/Assignment_Q1–Q7-40%2F40-2ea043?style=flat-square)
+![Autograder](https://img.shields.io/badge/Autograder_Q1–Q8-26%2F25-2ea043?style=flat-square)
 ![CS188](https://img.shields.io/badge/UC_Berkeley-CS188-ffb852?style=flat-square)
 ![No build step](https://img.shields.io/badge/build_step-none-ff4f6d?style=flat-square)
 
@@ -26,7 +27,7 @@ Our SE3062 Intelligent Systems search code, running live in your browser 🧠✨
 
 | | Mode | What you do |
 |---|------|-------------|
-| 🔍 | **Visualize** | Pick a problem, a maze and an algorithm. Watch every node get expanded, scrub the timeline, and read the exact Python function that ran. |
+| 🔍 | **Visualize** | Pick a problem (find a dot, visit four corners, eat every dot), a maze and an algorithm. Watch every node get expanded, scrub the timeline, and read the exact Python function that ran. |
 | ⚔️ | **Compare** | Run two algorithms side by side on the same maze and see which one expands fewer nodes and which finds the cheaper path. |
 | 🕹️ | **Play** | Classic Pac-Man with the arrow keys (or W A S D, or the on-screen pad on a phone), using the real CS188 game rules and ghost AI. |
 
@@ -74,6 +75,12 @@ The heuristic is the real maze distance to the farthest remaining dot. Pac-Man h
 </tr>
 </table>
 
+### 🏃 Greedy vs optimal (Q8)
+
+<img src="assets/greedy-vs-astar.png" alt="trickySearch solved two ways: closest-dot search expands 132 nodes for a 68-step path, A* with the food heuristic expands 4,137 nodes for the optimal 60-step path" width="100%">
+
+**Closest-dot search** runs a tiny BFS to the nearest dot, eats it, and repeats. It expands **31 times fewer nodes** than A\*, but its path is 8 steps longer, because always grabbing the nearest dot can leave a long trip back later. Try it yourself in **Compare** with the *Eat all the dots* problem. ⚖️
+
 ## 🕹️ And yes, you can just play it
 
 <div align="center">
@@ -91,7 +98,10 @@ The heuristic is the real maze distance to the farthest remaining dot. Pac-Man h
 | Q5 | 🧱 Corners problem | Chamara | 8 / 8 |
 | Q6 | 🧱 Corners heuristic (741 nodes) | Rosheni | 8 / 8 |
 | Q7 | 🍒 Food heuristic (4,137 nodes) | Sawanya | 8 / 8 |
-| | | **Total** | **40 / 40** 🏆 |
+| | | **Assignment total** | **40 / 40** 🏆 |
+| Q8 | 🏃 Closest-dot search *(extra, not part of the assignment)* | added for this site | ✅ 3 / 3 |
+
+The full CS188 autograder (`python autograder.py`) scores **26 / 25**: every question passes, plus the Q7 bonus point for expanding fewer than 7,000 nodes. 🎉
 
 ## ⚙️ How it works
 
@@ -137,7 +147,7 @@ python autograder.py -q q2    # one question
 ```
 📁 pacman-search-visualizer
 ├── 🐍 search.py           ← DFS, BFS, UCS, A*        (Q1–Q4)
-├── 🐍 searchAgents.py     ← corners + food problems  (Q5–Q7)
+├── 🐍 searchAgents.py     ← corners, food, closest dot (Q5–Q8)
 ├── 🌐 index.html          ← the web app
 ├── 📁 web/
 │   ├── app.js             ← modes, controls, playback
