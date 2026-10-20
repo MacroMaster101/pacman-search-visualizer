@@ -8,10 +8,33 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="web/style.css?v=2">
+  <link rel="stylesheet" href="web/style.css?v=3">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 16 L30 7 A15 15 0 1 0 30 25 Z' fill='%23ffd23f'/%3E%3C/svg%3E">
 </head>
 <body>
+  <!-- First-visit loading screen: Python has to download before anything can run -->
+  <div class="loader" id="loader" role="status" aria-live="polite" aria-labelledby="loader-stage">
+    <div class="loader-card">
+      <div class="chase" aria-hidden="true">
+        <span class="pac"></span>
+        <span class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="ghost"></span>
+      </div>
+      <p class="loader-title">Pac-Man Search</p>
+      <p class="loader-stage" id="loader-stage">Getting Python ready…</p>
+      <div class="loader-bar" role="progressbar" aria-label="Loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="loader-bar">
+        <span id="loader-fill"></span>
+      </div>
+      <ol class="loader-steps" id="loader-steps">
+        <li data-step="runtime">Download Python (about 10 MB, cached after the first visit)</li>
+        <li data-step="files">Load our search code</li>
+        <li data-step="import">Start the game engine</li>
+      </ol>
+      <p class="loader-tip" id="loader-tip"></p>
+      <button type="button" class="loader-skip" id="loader-skip">Look around while it loads</button>
+    </div>
+  </div>
+
   <header class="masthead">
     <h1 class="title">Pac-Man Search</h1>
     <p class="lede">Pick a maze and an algorithm, then watch it think. Every search here runs our
@@ -23,7 +46,7 @@
     </div>
   </header>
 
-  <p id="status" class="status" role="status" aria-live="polite">Loading Python (about 10 MB, only on the first visit)…</p>
+  <p id="status" class="status" aria-live="polite">Loading Python (about 10 MB, only on the first visit)…</p>
 
   <main>
     <!-- Visualize: one search, animated -->
@@ -54,7 +77,7 @@
 
       <div class="stage">
         <dl class="hud" id="viz-hud"></dl>
-        <div class="board"><canvas id="viz-canvas" aria-label="Maze"></canvas></div>
+        <div class="board"><canvas id="viz-canvas" aria-label="Maze"></canvas><div class="busy" hidden><span class="pac small" aria-hidden="true"></span><span class="busy-text">Searching…</span></div></div>
         <div class="playback" id="viz-playback" hidden>
           <button type="button" class="icon play-toggle" aria-label="Pause">❚❚</button>
           <input type="range" min="0" max="1000" value="0" aria-label="Timeline">
@@ -111,12 +134,12 @@
           <figure>
             <figcaption id="cmp-name-a"></figcaption>
             <dl class="hud small" id="cmp-hud-a"></dl>
-            <div class="board"><canvas id="cmp-canvas-a" aria-label="Left maze"></canvas></div>
+            <div class="board"><canvas id="cmp-canvas-a" aria-label="Left maze"></canvas><div class="busy" hidden><span class="pac small" aria-hidden="true"></span><span class="busy-text">Searching…</span></div></div>
           </figure>
           <figure>
             <figcaption id="cmp-name-b"></figcaption>
             <dl class="hud small" id="cmp-hud-b"></dl>
-            <div class="board"><canvas id="cmp-canvas-b" aria-label="Right maze"></canvas></div>
+            <div class="board"><canvas id="cmp-canvas-b" aria-label="Right maze"></canvas><div class="busy" hidden><span class="pac small" aria-hidden="true"></span><span class="busy-text">Searching…</span></div></div>
           </figure>
         </div>
         <div class="playback" id="cmp-playback" hidden>
@@ -184,6 +207,6 @@
       <a href="https://github.com/MacroMaster101/pacman-search-visualizer">Source on GitHub</a>.</p>
   </footer>
 
-  <script type="module" src="web/app.js?v=2"></script>
+  <script type="module" src="web/app.js?v=3"></script>
 </body>
 </html>

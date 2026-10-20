@@ -16,15 +16,24 @@ async function fetchText(url) {
   return response.text();
 }
 
+// Loading stages, so the page can show a real progress bar.
+const progress = (stage, done = 0, total = 0) => self.postMessage({ id: 'progress', stage, done, total });
+
 async function boot() {
+  progress('runtime');
   pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' });
   pyodide.FS.mkdirTree('/project/layouts');
   const root = new URL('../', self.location.href);
   const files = [...PROJECT_FILES.map((f) => [f, new URL(f, root)]),
     ['bridge.py', new URL('bridge.py', self.location.href)]];
+  let loaded = 0;
+  progress('files', 0, files.length);
   await Promise.all(files.map(async ([name, url]) => {
     pyodide.FS.writeFile(`/project/${name}`, await fetchText(url));
+    loaded += 1;
+    progress('files', loaded, files.length);
   }));
+  progress('import');
   pyodide.runPython(`
 import os, sys
 os.chdir('/project')

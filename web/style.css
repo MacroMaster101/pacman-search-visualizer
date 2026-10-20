@@ -471,3 +471,216 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .title { text-shadow: none; }
 }
+
+/* ------------------------------------------------------------ loading screen */
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background:
+    radial-gradient(ellipse at center, rgb(21 18 59 / 0.55), var(--night) 70%),
+    repeating-linear-gradient(0deg, transparent 0 39px, rgb(59 75 255 / 0.13) 39px 41px),
+    repeating-linear-gradient(90deg, transparent 0 39px, rgb(59 75 255 / 0.13) 39px 41px),
+    var(--night);
+  transition: opacity 0.45s ease, visibility 0.45s;
+}
+
+.loader.done {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.loader-card {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.loader-title {
+  margin: 0.4rem 0 0;
+  font: 400 clamp(1.2rem, 5vw, 1.8rem)/1.3 var(--pixel);
+  color: var(--pac);
+  text-shadow: 0 0 18px rgb(255 210 63 / 0.35);
+}
+
+.loader-stage {
+  margin: 0;
+  min-height: 1.6em;
+  font-size: 1.05rem;
+}
+
+.loader-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.loader-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--pac);
+  box-shadow: 0 0 12px rgb(255 210 63 / 0.6);
+  transition: width 0.35s ease;
+}
+
+.loader.failed .loader-bar span { background: var(--danger); box-shadow: none; }
+
+.loader-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  font-size: 0.92rem;
+  color: var(--muted);
+  width: 100%;
+}
+
+.loader-steps li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  align-items: baseline;
+}
+
+.loader-steps li::before { content: '○'; color: var(--rule); }
+.loader-steps li[data-state='active'] { color: var(--text); }
+.loader-steps li[data-state='active']::before { content: '●'; color: var(--pac); }
+.loader-steps li[data-state='done']::before { content: '✓'; color: var(--pac); font-weight: 700; }
+.loader-steps li[data-state='failed'] { color: var(--danger); }
+.loader-steps li[data-state='failed']::before { content: '✕'; color: var(--danger); }
+
+.loader-tip {
+  margin: 0.4rem 0 0;
+  min-height: 3em;
+  max-width: 44ch;
+  color: var(--muted);
+  font-size: 0.92rem;
+  transition: opacity 0.3s ease;
+}
+
+.loader-tip strong { color: var(--text); }
+
+.loader-skip {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font: 400 0.9rem/1 var(--body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.loader-skip:hover { color: var(--text); }
+
+/* Pac-Man chasing dots, a ghost close behind */
+.chase {
+  position: relative;
+  width: 260px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+}
+
+.pac {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--pac);
+  animation: chomp 0.28s ease-in-out infinite alternate;
+}
+
+.pac.small { width: 22px; height: 22px; }
+
+@keyframes chomp {
+  from { clip-path: polygon(100% 18%, 50% 50%, 100% 82%, 100% 100%, 0 100%, 0 0, 100% 0); }
+  to { clip-path: polygon(100% 50%, 50% 50%, 100% 50%, 100% 100%, 0 100%, 0 0, 100% 0); }
+}
+
+.dots {
+  flex: 1;
+  display: flex;
+  gap: 18px;
+  overflow: hidden;
+  margin-left: -10px;
+  padding-left: 14px;
+  height: 8px;
+}
+
+.dots i {
+  flex: 0 0 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot);
+  animation: dots-in 0.52s linear infinite;
+}
+
+@keyframes dots-in {
+  to { transform: translateX(-26px); }
+}
+
+.ghost {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 42px;
+  margin-left: 10px;
+  background: var(--danger);
+  border-radius: 20px 20px 0 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 83% 86%, 67% 100%, 50% 86%, 33% 100%, 17% 86%, 0 100%);
+  position: relative;
+  animation: bob 0.6s ease-in-out infinite alternate;
+}
+
+.ghost::before, .ghost::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  width: 11px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 55%, #1b1bb8 0 3px, #fff 3.5px);
+}
+
+.ghost::before { left: 7px; }
+.ghost::after { right: 7px; }
+
+@keyframes bob {
+  to { transform: translateY(-4px); }
+}
+
+/* ------------------------------------------------------------ searching overlay */
+
+.busy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  background: rgb(13 11 43 / 0.7);
+  font: 400 clamp(0.7rem, 1.6vw, 0.9rem)/1.4 var(--pixel);
+  color: var(--pac);
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pac, .dots i, .ghost { animation: none; }
+  .loader, .loader-bar span, .loader-tip { transition: none; }
+}

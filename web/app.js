@@ -1,4 +1,4 @@
-import { BoardRenderer } from './render.js?v=2';
+import { BoardRenderer } from './render.js?v=3';
 
 // ------------------------------------------------------------------ catalog
 
@@ -85,17 +85,22 @@ const fmt = (n) => (n == null ? '–' : Number(n).toLocaleString('en-US', { maxi
 // ------------------------------------------------------------------ python worker
 
 class PyWorker {
-  constructor(onReady) {
+  constructor(onReady, onProgress) {
     this.onReady = onReady;
+    this.onProgress = onProgress;
     this.seq = 0;
     this.start();
   }
 
   start() {
     this.pending = new Map();
-    this.worker = new Worker('web/worker.js?v=2');
+    this.worker = new Worker('web/worker.js?v=3');
     this.ready = new Promise((resolve, reject) => {
       this.worker.onmessage = ({ data }) => {
+        if (data.id === 'progress') {
+          this.onProgress(data);
+          return;
+        }
         if (data.id === 'ready') {
           if (data.ok) { resolve(); this.onReady(); } else reject(new Error(data.error));
           return;
@@ -131,11 +136,111 @@ function setStatus(text, isError = false) {
   status.classList.toggle('error', isError);
 }
 
+// ------------------------------------------------------------------ loading screen
+
+const TIPS = [
+  '<strong>BFS</strong> always finds the shortest path when every step costs the same.',
+  '<strong>DFS</strong> uses a stack. On mediumMaze it finds a 130-step path when 68 steps is possible.',
+  '<strong>UCS</strong> is Dijkstra’s algorithm that stops as soon as it pops the goal.',
+  'An <strong>admissible</strong> heuristic never overestimates, so A* still finds the optimal path.',
+  'On trickySearch, the food heuristic cuts A* from <strong>16,688</strong> expansions to <strong>4,137</strong>.',
+  'The corners heuristic gets A* down to <strong>741</strong> expansions on mediumCorners. BFS needs 1,966.',
+  '<strong>Greedy</strong> closest-dot search expands 31 times fewer nodes than A*, but its path is 8 steps longer.',
+  'Everything here runs <strong>real Python</strong>, compiled to WebAssembly, inside your browser tab.',
+];
+const STAGES = ['runtime', 'files', 'import'];
+const STAGE_TEXT = {
+  runtime: 'Downloading Python…',
+  files: 'Loading our search code…',
+  import: 'Starting the game engine…',
+};
+
+const loader = {
+  el: document.getElementById('loader'),
+  stage: document.getElementById('loader-stage'),
+  bar: document.getElementById('loader-bar'),
+  fill: document.getElementById('loader-fill'),
+  steps: document.getElementById('loader-steps'),
+  tip: document.getElementById('loader-tip'),
+  skip: document.getElementById('loader-skip'),
+  value: 0,
+  active: true,
+};
+
+function loaderSet(value) {
+  loader.value = Math.max(loader.value, Math.min(100, value));
+  loader.fill.style.width = `${loader.value}%`;
+  loader.bar.setAttribute('aria-valuenow', String(Math.round(loader.value)));
+}
+
+function loaderSteps(current, state = 'active') {
+  const index = STAGES.indexOf(current);
+  loader.steps.querySelectorAll('li').forEach((li) => {
+    const i = STAGES.indexOf(li.dataset.step);
+    li.dataset.state = i < index ? 'done' : i === index ? state : '';
+  });
+}
+
+// The runtime download gives no byte count, so ease toward 70% while it runs;
+// the file and import stages then fill the rest with real progress.
+const creep = setInterval(() => loaderSet(loader.value + (70 - loader.value) * 0.035), 150);
+
+function onLoadProgress({ stage, done, total }) {
+  if (!loader.active) return;
+  loaderSteps(stage);
+  loader.stage.textContent = STAGE_TEXT[stage];
+  if (stage === 'files') {
+    clearInterval(creep);
+    loaderSet(70 + (20 * done) / Math.max(1, total));
+  }
+  if (stage === 'import') loaderSet(94);
+}
+
+let tipIndex = Math.floor(Math.random() * TIPS.length);
+function showTip() {
+  loader.tip.style.opacity = 0;
+  setTimeout(() => {
+    loader.tip.innerHTML = `💡 ${TIPS[tipIndex % TIPS.length]}`;
+    loader.tip.style.opacity = 1;
+    tipIndex += 1;
+  }, 300);
+}
+showTip();
+const tipTimer = setInterval(showTip, 5000);
+
+function hideLoader() {
+  loader.active = false;
+  clearInterval(creep);
+  clearInterval(tipTimer);
+  loader.el.classList.add('done');
+  setTimeout(() => { loader.el.hidden = true; }, 500);
+}
+
+loader.skip.addEventListener('click', () => {
+  if (loader.el.classList.contains('failed')) location.reload();
+  else hideLoader();
+});
+
 const py = new PyWorker(() => {
   setStatus('Python is ready. Pick a maze and run a search.');
   document.querySelectorAll('.run').forEach((b) => { b.disabled = false; });
+  if (!loader.active) return;
+  loader.steps.querySelectorAll('li').forEach((li) => { li.dataset.state = 'done'; });
+  loader.stage.textContent = 'Ready! 🟡';
+  loaderSet(100);
+  setTimeout(hideLoader, 450);
+}, onLoadProgress);
+
+py.ready.catch((error) => {
+  setStatus(`Python could not start: ${error.message}. Check your connection and reload.`, true);
+  if (!loader.active) return;
+  clearInterval(creep);
+  loader.el.classList.add('failed');
+  const current = loader.steps.querySelector('[data-state=active]')?.dataset.step || 'runtime';
+  loaderSteps(current, 'failed');
+  loader.stage.textContent = 'Python could not load. Check your internet connection.';
+  loader.skip.textContent = 'Try again';
 });
-py.ready.catch((error) => setStatus(`Python could not start: ${error.message}. Check your connection and reload.`, true));
 
 const boards = new Map();
 async function getBoard(layout) {
@@ -331,20 +436,33 @@ function describeOutcome(result) {
   return null;
 }
 
-async function runGuarded(form, task) {
+// Dims the maze with a "Searching…" overlay while Python works, so a long
+// search never looks frozen. Short searches finish before it appears.
+function showBusy(busyEls, text) {
+  for (const el of busyEls) {
+    el.hidden = false;
+    el.querySelector('.busy-text').textContent = text;
+  }
+}
+
+async function runGuarded(form, task, busyEls = []) {
   const run = form.querySelector('.run');
   const stop = form.querySelector('.stop');
   run.disabled = true;
   stop.hidden = false;
   const started = performance.now();
   const timer = setInterval(() => {
-    setStatus(`Searching… ${((performance.now() - started) / 1000).toFixed(1)} s`);
-  }, 200);
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
+    setStatus(`Searching… ${seconds} s`);
+    if (performance.now() - started > 250) showBusy(busyEls, `Searching… ${seconds} s`);
+  }, 100);
   try {
     await task();
   } catch (error) {
+    clearInterval(timer);
     if (error.message === 'stopped') {
       setStatus('Search stopped. Restarting Python…');
+      showBusy(busyEls, 'Restarting Python…');
       await py.ready.catch(() => {});
       setStatus('Search stopped. Try a smaller maze or a better heuristic.');
     } else {
@@ -352,6 +470,7 @@ async function runGuarded(form, task) {
     }
   } finally {
     clearInterval(timer);
+    for (const el of busyEls) el.hidden = true;
     run.disabled = false;
     stop.hidden = true;
   }
@@ -462,7 +581,7 @@ function setupVisualize() {
       setStatus(describeOutcome(result)
         || `${algo} expanded ${fmt(result.expanded)} nodes and found a path costing ${fmt(result.cost)}.`);
       vizShowCode(cfg);
-    });
+    }, [viz.canvas.parentElement.querySelector('.busy')]);
   });
 }
 
@@ -607,7 +726,7 @@ function setupCompare() {
       cmp.player.load(tracks);
       cmp.verdict.textContent = cmpVerdict(cfgs, results);
       setStatus('Both searches finished.');
-    });
+    }, cmp.sides.map((s) => s.canvas.parentElement.querySelector('.busy')));
   });
 }
 
