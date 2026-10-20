@@ -17,7 +17,7 @@ const PROBLEMS = {
     heuristics: ['corners', 'null'],
   },
   food: {
-    label: 'Eat all the dots (Q7)',
+    label: 'Eat all the dots (Q7–Q8)',
     layouts: ['tinySearch', 'testSearch', 'trickySearch', 'smallSearch', 'greedySearch',
       'oddSearch', 'boxSearch', 'mediumSearch'],
     defaultLayout: 'trickySearch',
@@ -46,7 +46,16 @@ const ALGORITHMS = {
     name: 'A* search',
     about: 'Expands the lowest <strong>g(n) + h(n)</strong>: the cost so far plus the heuristic\'s estimate of what is left. Optimal when the heuristic is admissible and consistent. Written by Rosheni for Q4.',
   },
+  closest: {
+    short: 'Greedy',
+    name: 'Closest-dot search',
+    about: 'Runs <strong>BFS to the nearest dot</strong>, eats it, and repeats until the maze is empty. Each search is tiny, so it is fast, but it is <strong>not optimal</strong>: grabbing the nearest dot can leave a long trip back later. This is Q8 of the CS188 project.',
+    problems: ['food'],
+  },
 };
+
+const algoKeys = (problem) => Object.keys(ALGORITHMS)
+  .filter((key) => !ALGORITHMS[key].problems || ALGORITHMS[key].problems.includes(problem));
 
 const HEURISTICS = {
   manhattan: 'Manhattan distance',
@@ -144,8 +153,12 @@ function fillSelect(select, entries, selected) {
   }));
 }
 
-function buildAlgoGroup(container, name, selected) {
-  container.replaceChildren(...Object.entries(ALGORITHMS).map(([key, algo]) => {
+function buildAlgoGroup(container, name, selected, problem) {
+  const keys = algoKeys(problem);
+  if (!keys.includes(selected)) selected = 'bfs';
+  container.style.gridTemplateColumns = `repeat(${keys.length}, 1fr)`;
+  container.replaceChildren(...keys.map((key) => {
+    const algo = ALGORITHMS[key];
     const label = document.createElement('label');
     const input = document.createElement('input');
     input.type = 'radio';
@@ -405,7 +418,7 @@ function startOf(board) {
 }
 
 async function vizShowCode(cfg) {
-  const keys = [cfg.algorithm];
+  const keys = cfg.algorithm === 'closest' ? ['closestDot', 'anyFoodGoal', 'bfs'] : [cfg.algorithm];
   if (cfg.problem === 'corners') keys.push('corners');
   if (cfg.algorithm === 'astar' && cfg.heuristic === 'corners') keys.push('cornersHeuristic');
   if (cfg.algorithm === 'astar' && cfg.heuristic === 'food') keys.push('foodHeuristic');
@@ -419,13 +432,15 @@ function setupVisualize() {
   fillSelect(f.layout, layoutEntries('position'), PROBLEMS.position.defaultLayout);
   fillSelect(f.heuristic, heuristicEntries('position'), 'manhattan');
   fillSelect(f.cost, costEntries, 'uniform');
-  buildAlgoGroup(f.querySelector('[data-algo-group=viz]'), 'viz-algo', 'bfs');
+  buildAlgoGroup(f.querySelector('[data-algo-group=viz]'), 'viz-algo', 'bfs', 'position');
   vizSync();
 
   f.problem.addEventListener('change', () => {
     const p = f.problem.value;
     fillSelect(f.layout, layoutEntries(p), PROBLEMS[p].defaultLayout);
     fillSelect(f.heuristic, heuristicEntries(p), PROBLEMS[p].heuristics[0]);
+    const current = f.querySelector('input[name=viz-algo]:checked').value;
+    buildAlgoGroup(f.querySelector('[data-algo-group=viz]'), 'viz-algo', current, p);
     vizSync();
     vizShowBoard();
   });
@@ -535,7 +550,9 @@ function cmpVerdict(cfgs, results) {
   if (a.expanded === b.expanded) text = `Both expanded ${fmt(a.expanded)} nodes.`;
   else {
     const [winner, loser, diff] = a.expanded < b.expanded ? [na, nb, b.expanded - a.expanded] : [nb, na, a.expanded - b.expanded];
-    text = `${winner} expanded ${fmt(diff)} fewer nodes than ${loser.charAt(0).toLowerCase() + loser.slice(1)}.`;
+    // Lowercase "Breadth-first search" mid-sentence, but leave "A*" alone.
+    const midSentence = /^[A-Z][a-z]/.test(loser) ? loser.charAt(0).toLowerCase() + loser.slice(1) : loser;
+    text = `${winner} expanded ${fmt(diff)} fewer nodes than ${midSentence}.`;
   }
   if (Math.abs(a.cost - b.cost) < 1e-9) text += ` Both paths cost ${fmt(a.cost)}.`;
   else text += ` Path cost: ${fmt(a.cost)} on the left, ${fmt(b.cost)} on the right.`;
@@ -548,14 +565,20 @@ function setupCompare() {
   fillSelect(f.layout, layoutEntries('position'), PROBLEMS.position.defaultLayout);
   fillSelect(f.cost, costEntries, 'uniform');
   for (const side of ['a', 'b']) fillSelect(f[`heuristic-${side}`], heuristicEntries('position'), 'manhattan');
-  buildAlgoGroup(f.querySelector('[data-algo-group=a]'), 'cmp-algo-a', 'bfs');
-  buildAlgoGroup(f.querySelector('[data-algo-group=b]'), 'cmp-algo-b', 'astar');
+  buildAlgoGroup(f.querySelector('[data-algo-group=a]'), 'cmp-algo-a', 'bfs', 'position');
+  buildAlgoGroup(f.querySelector('[data-algo-group=b]'), 'cmp-algo-b', 'astar', 'position');
   cmpSync();
 
   f.problem.addEventListener('change', () => {
     const p = f.problem.value;
     fillSelect(f.layout, layoutEntries(p), PROBLEMS[p].defaultLayout);
-    for (const side of ['a', 'b']) fillSelect(f[`heuristic-${side}`], heuristicEntries(p), PROBLEMS[p].heuristics[0]);
+    for (const side of ['a', 'b']) {
+      fillSelect(f[`heuristic-${side}`], heuristicEntries(p), PROBLEMS[p].heuristics[0]);
+      // On the food problem, default to the Q8 greedy vs A* showdown.
+      const current = f.querySelector(`input[name=cmp-algo-${side}]:checked`).value;
+      const wanted = p === 'food' && side === 'a' ? 'closest' : current;
+      buildAlgoGroup(f.querySelector(`[data-algo-group=${side}]`), `cmp-algo-${side}`, wanted, p);
+    }
     cmpSync();
     cmpShowBoards();
   });

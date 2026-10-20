@@ -11,6 +11,7 @@ and exposes three JSON-in / JSON-out entry points to JavaScript:
 """
 import inspect
 import json
+import textwrap
 import time
 
 import layout as layoutmod
@@ -54,6 +55,8 @@ SOURCES = {
     'corners': searchAgents.CornersProblem,
     'cornersHeuristic': searchAgents.cornersHeuristic,
     'foodHeuristic': searchAgents.foodHeuristic,
+    'closestDot': searchAgents.ClosestDotSearchAgent.findPathToClosestDot,
+    'anyFoodGoal': searchAgents.AnyFoodSearchProblem.isGoalState,
 }
 
 
@@ -90,7 +93,7 @@ def board(name):
 
 
 def source(key):
-    return inspect.getsource(SOURCES[key])
+    return textwrap.dedent(inspect.getsource(SOURCES[key]))
 
 
 def _make_problem(problem_type, game_state, cost):
@@ -106,6 +109,32 @@ def _make_problem(problem_type, game_state, cost):
     raise ValueError('Unknown problem: ' + problem_type)
 
 
+def _closest_dot(game_state, order, limit):
+    """Q8: the real ClosestDotSearchAgent, one BFS per dot, recording every expansion."""
+    cls = searchAgents.AnyFoodSearchProblem
+    original = cls.getSuccessors
+
+    def recording_successors(self, state):
+        order.append(list(state))
+        if len(order) > limit:
+            raise SearchLimit()
+        return original(self, state)
+
+    cls.getSuccessors = recording_successors
+    try:
+        agent = searchAgents.ClosestDotSearchAgent()
+        actions = []
+        state = game_state
+        while state.getFood().count() > 0:
+            segment = agent.findPathToClosestDot(state)
+            actions += segment
+            for action in segment:
+                state = state.generateSuccessor(0, action)
+        return actions
+    finally:
+        cls.getSuccessors = original
+
+
 def run_search(cfg_json):
     cfg = json.loads(cfg_json)
     game_state = pacman.GameState()
@@ -114,6 +143,15 @@ def run_search(cfg_json):
 
     limit = int(cfg.get('limit', 300000))
     order = []
+
+    if cfg['algorithm'] == 'closest':
+        started = time.perf_counter()
+        try:
+            actions = _closest_dot(game_state, order, limit)
+            status = 'found'
+        except SearchLimit:
+            actions, status = [], 'limit'
+        return _report(status, actions, game_state, problem, order, limit, started)
     original = problem.getSuccessors
 
     def recording_successors(state):
@@ -135,11 +173,13 @@ def run_search(cfg_json):
             actions = algo(problem)
     except SearchLimit:
         status = 'limit'
-    elapsed = (time.perf_counter() - started) * 1000
-
     if status == 'found' and not actions and not problem.isGoalState(problem.getStartState()):
         status = 'none'
+    return _report(status, actions, game_state, problem, order, limit, started)
 
+
+def _report(status, actions, game_state, problem, order, limit, started):
+    elapsed = (time.perf_counter() - started) * 1000
     path = []
     cost = None
     if status == 'found':
