@@ -11,6 +11,7 @@ and exposes three JSON-in / JSON-out entry points to JavaScript:
 """
 import inspect
 import json
+import re
 import textwrap
 import time
 
@@ -61,6 +62,8 @@ SOURCES = {
 
 
 def _load(name):
+    if not re.fullmatch(r'[A-Za-z0-9]+', str(name)):
+        raise ValueError('Unknown maze: ' + str(name))
     lay = layoutmod.getLayout(name)
     if lay is None:
         raise ValueError('Layout not found: ' + name)

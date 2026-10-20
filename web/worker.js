@@ -42,7 +42,12 @@ import bridge
 `);
 }
 
+// Layout names are plain words like "mediumMaze"; refuse anything else before
+// it reaches a URL or a file path.
+const LAYOUT_NAME = /^[A-Za-z0-9]+$/;
+
 async function ensureLayout(name) {
+  if (!LAYOUT_NAME.test(String(name))) throw new Error(`Unknown maze: ${name}`);
   if (loadedLayouts.has(name)) return;
   const url = new URL(`../layouts/${name}.lay`, self.location.href);
   pyodide.FS.writeFile(`/project/layouts/${name}.lay`, await fetchText(url));
