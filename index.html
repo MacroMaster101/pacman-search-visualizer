@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pac-Man Search Visualizer</title>
+  <meta name="description" content="Watch DFS, BFS, UCS and A* search the Pac-Man maze, running the CS188 Python search code live in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="web/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 16 L30 7 A15 15 0 1 0 30 25 Z' fill='%23ffd23f'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="masthead">
+    <h1 class="title">Pac-Man Search</h1>
+    <p class="lede">Pick a maze and an algorithm, then watch it think. Every search here runs our
+      team's real CS188 Python code, compiled to WebAssembly, right in your browser.</p>
+    <div class="tabs" role="tablist" aria-label="Mode">
+      <button role="tab" id="tab-visualize" aria-controls="visualize" aria-selected="true">Visualize</button>
+      <button role="tab" id="tab-compare" aria-controls="compare" aria-selected="false" tabindex="-1">Compare</button>
+      <button role="tab" id="tab-play" aria-controls="play" aria-selected="false" tabindex="-1">Play</button>
+    </div>
+  </header>
+
+  <p id="status" class="status" role="status" aria-live="polite">Loading Python (about 10 MB, only on the first visit)…</p>
+
+  <main>
+    <!-- Visualize: one search, animated -->
+    <section id="visualize" class="mode" role="tabpanel" aria-labelledby="tab-visualize">
+      <form class="controls" id="viz-form">
+        <label class="field">Problem
+          <select name="problem"></select>
+        </label>
+        <label class="field">Maze
+          <select name="layout"></select>
+        </label>
+        <fieldset class="field algos">
+          <legend>Algorithm</legend>
+          <div class="segmented" data-algo-group="viz"></div>
+        </fieldset>
+        <label class="field" data-show="astar">Heuristic
+          <select name="heuristic"></select>
+        </label>
+        <label class="field" data-show="position">Step cost
+          <select name="cost"></select>
+        </label>
+        <div class="actions">
+          <button type="submit" class="run" disabled>Run search</button>
+          <button type="button" class="stop" hidden>Stop</button>
+        </div>
+        <p class="explain" id="viz-explain"></p>
+      </form>
+
+      <div class="stage">
+        <dl class="hud" id="viz-hud"></dl>
+        <div class="board"><canvas id="viz-canvas" aria-label="Maze"></canvas></div>
+        <div class="playback" id="viz-playback" hidden>
+          <button type="button" class="icon play-toggle" aria-label="Pause">❚❚</button>
+          <input type="range" min="0" max="1000" value="0" aria-label="Timeline">
+          <label class="speed">Speed
+            <select>
+              <option value="slow">Slow</option>
+              <option value="normal" selected>Normal</option>
+              <option value="fast">Fast</option>
+              <option value="instant">Instant</option>
+            </select>
+          </label>
+        </div>
+        <p class="legend"><span class="swatch early"></span>explored first
+          <span class="swatch late"></span>explored last
+          <span class="swatch route"></span>path found</p>
+        <details class="code" id="viz-code">
+          <summary>Show the Python code that ran</summary>
+          <pre><code></code></pre>
+        </details>
+      </div>
+    </section>
+
+    <!-- Compare: two searches on the same maze -->
+    <section id="compare" class="mode" role="tabpanel" aria-labelledby="tab-compare" hidden>
+      <form class="controls" id="cmp-form">
+        <label class="field">Problem
+          <select name="problem"></select>
+        </label>
+        <label class="field">Maze
+          <select name="layout"></select>
+        </label>
+        <fieldset class="field side" data-side="a">
+          <legend>Left</legend>
+          <div class="segmented" data-algo-group="a"></div>
+          <label class="sub" data-show="astar">Heuristic <select name="heuristic-a"></select></label>
+        </fieldset>
+        <fieldset class="field side" data-side="b">
+          <legend>Right</legend>
+          <div class="segmented" data-algo-group="b"></div>
+          <label class="sub" data-show="astar">Heuristic <select name="heuristic-b"></select></label>
+        </fieldset>
+        <label class="field" data-show="position">Step cost
+          <select name="cost"></select>
+        </label>
+        <div class="actions">
+          <button type="submit" class="run" disabled>Run both</button>
+          <button type="button" class="stop" hidden>Stop</button>
+        </div>
+      </form>
+
+      <div class="stage">
+        <p class="verdict" id="cmp-verdict"></p>
+        <div class="duel">
+          <figure>
+            <figcaption id="cmp-name-a"></figcaption>
+            <dl class="hud small" id="cmp-hud-a"></dl>
+            <div class="board"><canvas id="cmp-canvas-a" aria-label="Left maze"></canvas></div>
+          </figure>
+          <figure>
+            <figcaption id="cmp-name-b"></figcaption>
+            <dl class="hud small" id="cmp-hud-b"></dl>
+            <div class="board"><canvas id="cmp-canvas-b" aria-label="Right maze"></canvas></div>
+          </figure>
+        </div>
+        <div class="playback" id="cmp-playback" hidden>
+          <button type="button" class="icon play-toggle" aria-label="Pause">❚❚</button>
+          <input type="range" min="0" max="1000" value="0" aria-label="Timeline">
+          <label class="speed">Speed
+            <select>
+              <option value="slow">Slow</option>
+              <option value="normal" selected>Normal</option>
+              <option value="fast">Fast</option>
+              <option value="instant">Instant</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Play: the real game rules, driven by the keyboard -->
+    <section id="play" class="mode" role="tabpanel" aria-labelledby="tab-play" hidden>
+      <form class="controls" id="play-form">
+        <label class="field">Maze
+          <select name="layout"></select>
+        </label>
+        <label class="field">Ghosts
+          <select name="ghosts">
+            <option value="directional">Chase Pac-Man</option>
+            <option value="random">Wander randomly</option>
+          </select>
+        </label>
+        <label class="field">How many ghosts
+          <select name="count">
+            <option value="0">None</option>
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button type="submit" class="run" disabled>Start game</button>
+        </div>
+        <p class="explain">Move with the arrow keys or W A S D. Eat every dot to win; a power
+          pellet lets you eat the ghosts for a short time.</p>
+      </form>
+
+      <div class="stage">
+        <dl class="hud" id="play-hud"></dl>
+        <div class="board">
+          <canvas id="play-canvas" aria-label="Game"></canvas>
+          <p class="overlay" id="play-overlay" hidden></p>
+        </div>
+        <div class="dpad" aria-label="Direction pad">
+          <button type="button" data-dir="North" aria-label="Up">▲</button>
+          <button type="button" data-dir="West" aria-label="Left">◀</button>
+          <button type="button" data-dir="South" aria-label="Down">▼</button>
+          <button type="button" data-dir="East" aria-label="Right">▶</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="credits">
+    <p>SE3062 Intelligent Systems group project by Chamara, Kavisha, Sawanya and Rosheni.
+      Built on the <a href="http://ai.berkeley.edu">UC Berkeley CS188</a> Pac-Man framework.
+      <a href="https://github.com/MacroMaster101/pacman-search-visualizer">Source on GitHub</a>.</p>
+  </footer>
+
+  <script type="module" src="web/app.js"></script>
+</body>
+</html>
