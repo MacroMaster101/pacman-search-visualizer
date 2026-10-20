@@ -1,6 +1,43 @@
+# AI assistant files, configs and notes
+.claude/
+.claude-*/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.gemini/
+.cursor/
+.cursorrules
+.cursorignore
+.windsurf/
+.windsurfrules
+.codeium/
+.continue/
+.aider*
+.copilot/
+.github/copilot-instructions.md
+.codex/
+.kiro/
+.roo/
+.clinerules
+.cline/
+graphify-out/
+*.ai.md
+ai-notes/
+ai-docs/
+prompts/
+
+# Python
 __pycache__/
-*.pyc
-.DS_Store
-.idea/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Editors and OS
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
 *.log
